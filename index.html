@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LED 屏 WiFi 配网</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, "Microsoft YaHei", sans-serif;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { max-width: 420px; width: 100%; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { font-size: 22px; color: #7B61FF; margin-bottom: 8px; }
+        .header .subtitle { font-size: 13px; color: #888; }
+        .card {
+            background: #252535;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #ccc;
+        }
+        .bt-icon { text-align: center; margin: 16px 0; }
+        .bt-icon svg { width: 48px; height: 48px; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:active { opacity: 0.8; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary { background: #7B61FF; color: #fff; }
+        .btn-success { background: #4CAF50; color: #fff; }
+        .btn-warning { background: #FF9800; color: #fff; }
+        .input-group { margin-bottom: 16px; }
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 6px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-group input:focus { border-color: #7B61FF; }
+        .status-bar {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .status-bar.info { background: #1a2a3a; color: #4DD0E1; }
+        .status-bar.success { background: #1a3a2a; color: #4CAF50; }
+        .status-bar.error { background: #3a1a1a; color: #f44336; }
+        .status-bar.warning { background: #3a2a1a; color: #FF9800; }
+        .hidden { display: none; }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #444;
+            border-top-color: #7B61FF;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .shake { animation: shake 0.4s; }
+        .steps {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.8;
+            padding-left: 20px;
+        }
+        .steps li { margin-bottom: 4px; }
+        .device-info {
+            text-align: center;
+            font-size: 13px;
+            color: #4DD0E1;
+            margin-bottom: 12px;
+        }
+        .install-hint {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>LED 屏 WiFi 配网</h1>
+        <div class="subtitle">蓝牙 BLE 配网</div>
+    </div>
+
+    <div id="step-connect" class="card">
+        <div class="card-title">步骤 1: 连接蓝牙</div>
+        <div class="bt-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7B61FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v20M7 7l5 5 5-5M7 17l5-5 5 5"/>
+            </svg>
+        </div>
+        <div class="device-info">设备名称: LED_SCREEN_0682</div>
+        <button id="btn-connect" class="btn btn-primary" onclick="connectBluetooth()">
+            连接蓝牙设备
+        </button>
+        <div id="connect-status" class="hidden"></div>
+    </div>
+
+    <div id="step-wifi" class="card hidden">
+        <div class="card-title">步骤 2: 输入 WiFi 信息</div>
+        <div id="wifi-status" class="status-bar info hidden"></div>
+        <div class="input-group">
+            <label>WiFi 名称</label>
+            <input type="text" id="ssid" placeholder="输入 WiFi 名称" autocomplete="off">
+        </div>
+        <div class="input-group">
+            <label>WiFi 密码</label>
+            <input type="password" id="password" placeholder="输入 WiFi 密码" autocomplete="off">
+        </div>
+        <button id="btn-submit" class="btn btn-primary" onclick="submitWifi()">
+            开始连接
+        </button>
+    </div>
+
+    <div id="step-result" class="card hidden">
+        <div class="card-title">配网结果</div>
+        <div id="result-status" class="status-bar info"></div>
+        <button id="btn-retry" class="btn btn-warning hidden" onclick="resetToWifi()">
+            重新配网
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">使用说明</div>
+        <ol class="steps">
+            <li>确保手机蓝牙已开启</li>
+            <li>点击「连接蓝牙设备」按钮</li>
+            <li>在弹出的设备列表中选择 LED_SCREEN_0682</li>
+            <li>输入 WiFi 名称和密码</li>
+            <li>点击「开始连接」等待结果</li>
+        </ol>
+        <div class="install-hint">
+            Chrome菜单 → 添加到主屏幕，下次直接点图标打开<br>
+            支持 Chrome、Edge 浏览器
+        </div>
+    </div>
+</div>
+
+<script>
+const SERVICE_UUID     = '0000ff00-0000-1000-8000-00805f9b34fb';
+const SSID_UUID        = '0000ff01-0000-1000-8000-00805f9b34fb';
+const PASSWORD_UUID    = '0000ff02-0000-1000-8000-00805f9b34fb';
+const STATUS_UUID      = '0000ff03-0000-1000-8000-00805f9b34fb';
+const TRIGGER_UUID     = '0000ff04-0000-1000-8000-00805f9b34fb';
+
+const STATUS_IDLE          = 0;
+const STATUS_CONNECTING    = 1;
+const STATUS_CONNECTED     = 2;
+const STATUS_FAILED        = 3;
+const STATUS_WRONG_PASS    = 4;
+
+let bluetoothDevice = null;
+let statusCharacteristic = null;
+let statusCheckInterval = null;
+
+function strToBytes(str) {
+    return new TextEncoder().encode(str);
+}
+
+function showStatus(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    el.className = 'status-bar ' + type;
+    el.innerHTML = message;
+    el.classList.remove('hidden');
+}
+
+async function connectBluetooth() {
+    const btn = document.getElementById('btn-connect');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>搜索设备中...';
+
+    try {
+        if (!navigator.bluetooth) {
+            throw new Error('浏览器不支持 Web Bluetooth，请使用 Chrome 或 Edge');
+        }
+
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'LED_SCREEN_0682' }],
+            optionalServices: [SERVICE_UUID]
+        });
+
+        btn.innerHTML = '<span class="spinner"></span>连接中...';
+
+        const server = await bluetoothDevice.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        statusCharacteristic = await service.getCharacteristic(STATUS_UUID);
+
+        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+        btn.innerHTML = '已连接';
+        btn.className = 'btn btn-success';
+        showStatus('connect-status', '蓝牙已连接', 'success');
+
+        setTimeout(() => {
+            document.getElementById('step-connect').classList.add('hidden');
+            document.getElementById('step-wifi').classList.remove('hidden');
+        }, 800);
+
+    } catch (error) {
+        btn.disabled = false;
+        btn.innerHTML = '连接蓝牙设备';
+        btn.className = 'btn btn-primary';
+
+        if (error.name === 'NotFoundError') {
+            showStatus('connect-status', '未找到设备，请确保设备已开机', 'error');
+        } else {
+            showStatus('connect-status', '连接失败: ' + error.message, 'error');
+        }
+    }
+}
+
+function onDisconnected() {
+    clearInterval(statusCheckInterval);
+    showStatus('wifi-status', '蓝牙连接已断开', 'error');
+    document.getElementById('btn-submit').disabled = false;
+    document.getElementById('btn-submit').innerHTML = '开始连接';
+}
+
+async function submitWifi() {
+    const ssid = document.getElementById('ssid').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('btn-submit');
+
+    if (!ssid) {
+        showStatus('wifi-status', '请输入 WiFi 名称', 'error');
+        document.querySelector('.input-group').classList.add('shake');
+        setTimeout(() => document.querySelector('.input-group').classList.remove('shake'), 400);
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>发送中...';
+
+    try {
+        if (!bluetoothDevice || !bluetoothDevice.gatt.connected) {
+            await bluetoothDevice.gatt.connect();
+        }
+
+        const service = await bluetoothDevice.gatt.getPrimaryService(SERVICE_UUID);
+
+        const ssidChar = await service.getCharacteristic(SSID_UUID);
+        await ssidChar.writeValue(strToBytes(ssid));
+
+        const passChar = await service.getCharacteristic(PASSWORD_UUID);
+        await passChar.writeValue(strToBytes(password));
+
+        btn.innerHTML = '<span class="spinner"></span>触发连接...';
+
+        const triggerChar = await service.getCharacteristic(TRIGGER_UUID);
+        await triggerChar.writeValue(new Uint8Array([1]));
+
+        showStatus('wifi-status', '<span class="spinner"></span>WiFi 连接中...', 'info');
+        startStatusPolling();
+
+    } catch (error) {
+        showStatus('wifi-status', '发送失败: ' + error.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = '开始连接';
+    }
+}
+
+function startStatusPolling() {
+    clearInterval(statusCheckInterval);
+    let elapsed = 0;
+    const maxWait = 45;
+
+    statusCheckInterval = setInterval(async () => {
+        elapsed++;
+        try {
+            const value = await statusCharacteristic.readValue();
+            const status = value.getUint8(0);
+
+            if (status === STATUS_CONNECTED) {
+                clearInterval(statusCheckInterval);
+                showResult('success', 'WiFi 连接成功！设备已上线。');
+            } else if (status === STATUS_FAILED) {
+                clearInterval(statusCheckInterval);
+                showResult('error', 'WiFi 连接失败，请检查 WiFi 名称是否正确');
+            } else if (status === STATUS_WRONG_PASS) {
+                clearInterval(statusCheckInterval);
+                showResult('error', 'WiFi 密码错误，请重新输入');
+            } else if (status === STATUS_CONNECTING) {
+                showStatus('wifi-status', '<span class="spinner"></span>WiFi 连接中... (' + elapsed + 's)', 'info');
+            }
+
+            if (elapsed >= maxWait) {
+                clearInterval(statusCheckInterval);
+                showResult('warning', '连接超时，请检查 WiFi 是否可用');
+            }
+        } catch (error) {
+            console.error('Status read error:', error);
+        }
+    }, 2000);
+}
+
+function showResult(type, message) {
+    document.getElementById('step-wifi').classList.add('hidden');
+    document.getElementById('step-result').classList.remove('hidden');
+    showStatus('result-status', message, type);
+
+    if (type === 'success') {
+        setTimeout(() => {
+            if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+                bluetoothDevice.gatt.disconnect();
+            }
+        }, 3000);
+    } else {
+        document.getElementById('btn-retry').classList.remove('hidden');
+    }
+}
+
+function resetToWifi() {
+    document.getElementById('step-result').classList.add('hidden');
+    document.getElementById('step-wifi').classList.remove('hidden');
+    document.getElementById('btn-submit').disabled = false;
+    document.getElementById('btn-submit').innerHTML = '开始连接';
+    document.getElementById('wifi-status').classList.add('hidden');
+    document.getElementById('btn-retry').classList.add('hidden');
+    document.getElementById('password').value = '';
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    if (!navigator.bluetooth) {
+        const btn = document.getElementById('btn-connect');
+        btn.disabled = true;
+        btn.innerHTML = '浏览器不支持';
+        showStatus('connect-status',
+            '当前浏览器不支持 Web Bluetooth API<br>请使用 <strong>Chrome</strong> 或 <strong>Edge</strong>',
+            'error');
+    }
+});
+</script>
+</body>
+</html>
